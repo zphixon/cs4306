@@ -9,17 +9,7 @@ pub fn parse_expr<'a>(scanner: &mut Scanner<'a>, min_bp: u8) -> Result<Expr<'a>,
     let lhs_token = scanner.next_token()?;
 
     let mut lhs = match lhs_token.kind {
-        TokenKind::Variable => {
-            if scanner.peek_token(0)?.implicit_product() {
-                Expr::Binary {
-                    lhs: Box::new(Expr::Literal { literal: lhs_token }),
-                    op: Token::new(TokenKind::ImplicitMultiply, "implicit *"),
-                    rhs: Box::new(parse_expr(scanner, MULTIPLY_DIVIDE_MOD)?),
-                }
-            } else {
-                Expr::Variable { name: lhs_token }
-            }
-        }
+        TokenKind::Variable => Expr::Variable { name: lhs_token },
 
         TokenKind::Builtin => {
             // consume left paren
@@ -28,30 +18,12 @@ pub fn parse_expr<'a>(scanner: &mut Scanner<'a>, min_bp: u8) -> Result<Expr<'a>,
             panic!("idk how to do this yet xd");
         }
 
-        TokenKind::Integer(_) | TokenKind::Float(_) => {
-            if scanner.peek_token(0)?.implicit_product() {
-                Expr::Binary {
-                    lhs: Box::new(Expr::Literal { literal: lhs_token }),
-                    op: Token::new(TokenKind::ImplicitMultiply, "implicit *"),
-                    rhs: Box::new(parse_expr(scanner, MULTIPLY_DIVIDE_MOD)?),
-                }
-            } else {
-                Expr::Literal { literal: lhs_token }
-            }
-        }
+        TokenKind::Integer(_) | TokenKind::Float(_) => Expr::Literal { literal: lhs_token },
 
         TokenKind::LeftParen => {
             let lhs = parse(scanner)?;
             consume(scanner, TokenKind::RightParen)?;
-            if scanner.peek_token(0)?.implicit_product() {
-                Expr::Binary {
-                    lhs: Box::new(lhs),
-                    op: Token::new(TokenKind::ImplicitMultiply, "implicit *"),
-                    rhs: Box::new(parse_expr(scanner, MULTIPLY_DIVIDE_MOD)?),
-                }
-            } else {
-                lhs
-            }
+            lhs
         }
 
         TokenKind::Minus => {
@@ -82,22 +54,44 @@ pub fn parse_expr<'a>(scanner: &mut Scanner<'a>, min_bp: u8) -> Result<Expr<'a>,
             continue;
         }
 
+        if op_token.kind == TokenKind::Variable {
+            if MULTIPLY_DIVIDE_MOD < min_bp {
+                break;
+            }
+
+            lhs = Expr::Binary {
+                lhs: Box::new(lhs),
+                op: Token::new(TokenKind::Multiply, "*"),
+                rhs: Box::new(parse_expr(scanner, MULTIPLY_DIVIDE_MOD + 1)?),
+            };
+
+            continue;
+        }
+
         if let Some(lbp) = infix_bp(op_token.kind) {
             if lbp < min_bp {
                 break;
             }
 
-            let op = scanner.next_token()?;
+            if scanner.peek_token(0)?.kind != TokenKind::LeftParen {
+                let op = scanner.next_token()?;
 
-            lhs = Expr::Binary {
-                lhs: Box::new(lhs),
-                op,
-                rhs: if op.kind == TokenKind::Power {
-                    Box::new(parse_expr(scanner, lbp + 1)?)
-                } else {
-                    Box::new(parse_expr(scanner, MULTIPLY_DIVIDE_MOD)?)
-                },
-            };
+                lhs = Expr::Binary {
+                    lhs: Box::new(lhs),
+                    op,
+                    rhs: Box::new(parse_expr(scanner, lbp + 1)?),
+                };
+            } else {
+                consume(scanner, TokenKind::LeftParen)?;
+                let rhs = parse_expr(scanner, 0)?;
+                consume(scanner, TokenKind::RightParen)?;
+
+                lhs = Expr::Binary {
+                    lhs: Box::new(lhs),
+                    op: Token::new(TokenKind::Multiply, "*"),
+                    rhs: Box::new(rhs),
+                };
+            }
 
             continue;
         }
@@ -133,7 +127,9 @@ fn infix_bp(kind: TokenKind) -> Option<u8> {
     match kind {
         TokenKind::Equal => Some(EQUAL_LESS_GREATER),
         TokenKind::Plus | TokenKind::Minus => Some(PLUS_MINUS),
-        TokenKind::Multiply | TokenKind::Divide | TokenKind::Modulo => Some(MULTIPLY_DIVIDE_MOD),
+        TokenKind::Multiply | TokenKind::Divide | TokenKind::Modulo | TokenKind::LeftParen => {
+            Some(MULTIPLY_DIVIDE_MOD)
+        }
         TokenKind::Power => Some(POWER),
         _ => None,
     }
@@ -144,6 +140,7 @@ fn consume(scanner: &mut Scanner<'_>, kind: TokenKind) -> Result<(), &'static st
     if t.kind == kind {
         Ok(())
     } else {
+        println!("wanted {:?} got {:?}", kind, t.kind);
         Err("syntax error")
     }
 }

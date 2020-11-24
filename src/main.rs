@@ -84,7 +84,7 @@ mod test {
                         literal: Token::new(TokenKind::Integer(1), "1")
                     }),
                 }),
-                op: Token::new(TokenKind::ImplicitMultiply, "implicit *"),
+                op: Token::new(TokenKind::Multiply, "*"),
                 rhs: Box::new(Expr::Binary {
                     lhs: Box::new(Expr::Binary {
                         lhs: Box::new(Expr::Variable {
@@ -115,7 +115,9 @@ mod test {
             "(poopy(3l)^3(4^4)^(4^4))3",
         ];
         for expr in exprs.iter() {
-            parse(&mut Scanner::new(expr)).unwrap();
+            if let Err(_) = parse(&mut Scanner::new(expr)) {
+                panic!("\"{}\" failed", expr);
+            }
         }
     }
 
