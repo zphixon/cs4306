@@ -31,6 +31,31 @@ pub enum Expr<'a> {
     },
 }
 
+pub fn print_infix(expr: &Expr<'_>) {
+    match expr {
+        Expr::Literal { literal } => print!("{}", literal.lexeme),
+        Expr::Variable { name } => print!("{}", name.lexeme),
+        Expr::SpecialVariable { name } => print!("{}", name.lexeme),
+        Expr::Unary { op, rhs } => {
+            print!(" {} ", op.lexeme);
+            print_infix(rhs.as_ref());
+        }
+        Expr::Binary { lhs, op, rhs } => {
+            print_infix(lhs);
+            println!(" {} ", op.lexeme);
+            print_infix(rhs);
+        }
+        Expr::Call { name, args } => {
+            print!("{}(", name.lexeme);
+            for expr in args.iter() {
+                print_infix(expr);
+                print!(",");
+            }
+            print!(")");
+        }
+    }
+}
+
 pub fn print_expr(expr: &Expr<'_>) {
     print_expr_(expr, 0);
 }

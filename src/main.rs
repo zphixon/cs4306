@@ -21,6 +21,7 @@ fn main() {
     if let Ok(expr) = expr {
         println!("{:#?}", expr);
         ast::print_expr(&expr);
+        ast::print_infix(&expr);
     } else {
         println!("err: {:?}", expr);
     }
