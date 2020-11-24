@@ -7,7 +7,6 @@ pub enum TokenKind {
     Minus,
     Plus,
     Multiply,
-    ImplicitMultiply,
     Divide,
     Power,
     Modulo,
@@ -19,9 +18,11 @@ pub enum TokenKind {
     GreaterEqual,
     NotEqual,
     Variable,
-    Builtin,
+    SpecialVariable,
+    BuiltinFunction,
     Integer(u64),
     Float(f64),
+    Comma,
     End,
 }
 
@@ -34,16 +35,6 @@ pub struct Token<'a> {
 impl Token<'_> {
     pub fn new(kind: TokenKind, lexeme: &str) -> Token<'_> {
         Token { kind, lexeme }
-    }
-
-    pub fn implicit_product(&self) -> bool {
-        match self.kind {
-            TokenKind::LeftParen
-            | TokenKind::Variable
-            | TokenKind::Integer(_)
-            | TokenKind::Float(_) => true,
-            _ => false,
-        }
     }
 }
 
@@ -107,7 +98,31 @@ impl<'a> Scanner<'a> {
             b'^' => TokenKind::Power,
             b'%' => TokenKind::Modulo,
             b'=' => TokenKind::Equal,
-            b'!' => TokenKind::Factorial,
+            b',' => TokenKind::Comma,
+            b'<' => {
+                if self.peek_char() == b'=' {
+                    self.advance_char();
+                    TokenKind::LessEqual
+                } else {
+                    TokenKind::Less
+                }
+            }
+            b'>' => {
+                if self.peek_char() == b'=' {
+                    self.advance_char();
+                    TokenKind::GreaterEqual
+                } else {
+                    TokenKind::Greater
+                }
+            }
+            b'!' => {
+                if self.peek_char() == b'=' {
+                    self.advance_char();
+                    TokenKind::NotEqual
+                } else {
+                    TokenKind::Factorial
+                }
+            }
             c => {
                 if c.is_ascii_digit() {
                     self.scan_number()?
@@ -124,7 +139,6 @@ impl<'a> Scanner<'a> {
     }
 
     fn scan_name(&mut self) -> Result<TokenKind, &'static str> {
-        // TODO: common single-letter names
         while !is_non_identifier(self.peek_char()) {
             self.advance_char();
         }
@@ -228,8 +242,20 @@ fn is_non_identifier(c: u8) -> bool {
         || c == b'/'
         || c == b'^'
         || c == b'%'
+        || c == b','
+        || c == b'!'
+        || c == b'>'
+        || c == b'<'
+        || c == b'='
+        || c == b','
 }
 
 fn to_keyword(token: &str) -> Option<TokenKind> {
-    None
+    match token {
+        "sin" | "cos" | "tan" | "csc" | "sec" | "cot" | "sigma" | "ln" | "log" => {
+            Some(TokenKind::BuiltinFunction)
+        }
+        "theta" | "dx" | "dy" | "dtheta" => Some(TokenKind::SpecialVariable),
+        _ => None,
+    }
 }

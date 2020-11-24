@@ -10,12 +10,25 @@ pub fn parse_expr<'a>(scanner: &mut Scanner<'a>, min_bp: u8) -> Result<Expr<'a>,
 
     let mut lhs = match lhs_token.kind {
         TokenKind::Variable => Expr::Variable { name: lhs_token },
+        TokenKind::SpecialVariable => Expr::SpecialVariable { name: lhs_token },
 
-        TokenKind::Builtin => {
-            // consume left paren
-            // collect args separated by commas
-            // consume right paren
-            panic!("idk how to do this yet xd");
+        TokenKind::BuiltinFunction => {
+            consume(scanner, TokenKind::LeftParen)?;
+            let mut args = Vec::new();
+
+            loop {
+                args.push(parse(scanner)?);
+                if scanner.peek_token(0)?.kind == TokenKind::RightParen {
+                    break;
+                }
+                consume(scanner, TokenKind::Comma)?;
+            }
+
+            consume(scanner, TokenKind::RightParen)?;
+            Expr::Call {
+                name: lhs_token,
+                args,
+            }
         }
 
         TokenKind::Integer(_) | TokenKind::Float(_) => Expr::Literal { literal: lhs_token },
@@ -102,7 +115,7 @@ pub fn parse_expr<'a>(scanner: &mut Scanner<'a>, min_bp: u8) -> Result<Expr<'a>,
     Ok(lhs)
 }
 
-const EQUAL_LESS_GREATER: u8 = 1;
+const COMPARE: u8 = 1;
 const PLUS_MINUS: u8 = 2;
 const MULTIPLY_DIVIDE_MOD: u8 = 3;
 const POWER: u8 = 4;
@@ -125,7 +138,12 @@ fn postfix_bp(kind: TokenKind) -> Option<u8> {
 
 fn infix_bp(kind: TokenKind) -> Option<u8> {
     match kind {
-        TokenKind::Equal => Some(EQUAL_LESS_GREATER),
+        TokenKind::Equal
+        | TokenKind::Less
+        | TokenKind::LessEqual
+        | TokenKind::Greater
+        | TokenKind::GreaterEqual
+        | TokenKind::NotEqual => Some(COMPARE),
         TokenKind::Plus | TokenKind::Minus => Some(PLUS_MINUS),
         TokenKind::Multiply | TokenKind::Divide | TokenKind::Modulo | TokenKind::LeftParen => {
             Some(MULTIPLY_DIVIDE_MOD)

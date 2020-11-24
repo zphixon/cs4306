@@ -10,6 +10,10 @@ pub enum Expr<'a> {
         name: Token<'a>,
     },
 
+    SpecialVariable {
+        name: Token<'a>,
+    },
+
     Unary {
         op: Token<'a>,
         rhs: Box<Expr<'a>>,
@@ -44,6 +48,7 @@ fn print_expr_(expr: &Expr<'_>, level: usize) {
     match expr {
         Expr::Literal { literal } => println!("{}", literal.lexeme),
         Expr::Variable { name } => println!("{}", name.lexeme),
+        Expr::SpecialVariable { name } => println!("{}", name.lexeme),
         Expr::Unary { op, rhs } => {
             println!("unary {}", op.lexeme);
             print_expr_(rhs.as_ref(), level + 1);

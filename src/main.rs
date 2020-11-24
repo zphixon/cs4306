@@ -3,11 +3,12 @@ mod parse;
 mod scan;
 
 fn main() {
-    let expr = "f(x)=3x^2-2x+1";
+    //let expr = "f(x)!=3x^2-2x+1";
     //let expr = "(x^2+1)(x^2-2)";
     //let expr = "-3(x+2)";
     //let expr = "-3x-6";
     //let expr = "(x(3l)^3*(4^4)^(4^4))3";
+    let expr = "sigma(i=0, 100, i^2)";
     println!(
         "{:?}",
         scan::Scanner::new(expr).scan_all().and_then(|ok| Ok(ok
