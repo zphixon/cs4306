@@ -4,24 +4,30 @@ mod scan;
 
 fn main() {
     //let expr = "f(x)!=3x^2-2x+1";
-    //let expr = "(x^2+1)(x^2-2)";
+    let expr = "(x^2+1)(x^2-2)";
     //let expr = "-3(x+2)";
     //let expr = "-3x-6";
     //let expr = "(x(3l)^3*(4^4)^(4^4))3";
-    let expr = "sigma(i=0, 100, i^2)";
-    println!(
-        "{:?}",
-        scan::Scanner::new(expr).scan_all().and_then(|ok| Ok(ok
-            .iter()
-            .map(|tk| tk.kind)
-            .collect::<Vec<scan::TokenKind>>()))
-    );
+    //let expr = "sigma(i=0, 100, i^2)";
+    //println!(
+    //    "{:?}",
+    //    scan::Scanner::new(expr).scan_all().and_then(|ok| Ok(ok
+    //        .iter()
+    //        .map(|tk| tk.kind)
+    //        .collect::<Vec<scan::TokenKind>>()))
+    //);
 
     let expr = parse::parse(&mut scan::Scanner::new(expr));
     if let Ok(expr) = expr {
-        println!("{:#?}", expr);
-        ast::print_expr(&expr);
+        //println!("{:#?}", expr);
+        //ast::print_expr(&expr);
+        print!("infix: ");
         ast::print_infix(&expr);
+        print!("\nprefix: ");
+        ast::print_prefix(&expr);
+        print!("\npostfix: ");
+        ast::print_postfix(&expr);
+        println!();
     } else {
         println!("err: {:?}", expr);
     }
