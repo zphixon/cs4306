@@ -1,23 +1,54 @@
+use rustyline::error::ReadlineError;
+use rustyline::Editor;
+
 mod ast;
 mod parse;
 mod scan;
 
 fn main() {
-    //let expr = "f(x)!=3x^2-2x+1";
-    let expr = "(x^2+1)(x^2-2)";
-    //let expr = "-3(x+2)";
-    //let expr = "-3x-6";
-    //let expr = "(x(3l)^3*(4^4)^(4^4))3";
-    //let expr = "sigma(i=0, 100, i^2)";
-    //println!(
-    //    "{:?}",
-    //    scan::Scanner::new(expr).scan_all().and_then(|ok| Ok(ok
-    //        .iter()
-    //        .map(|tk| tk.kind)
-    //        .collect::<Vec<scan::TokenKind>>()))
-    //);
+    if std::env::args().any(|arg| arg == "-f") {
+        let expr = "f(x)!=3x^2-2x+1";
+        //let expr = "(x^2+1)(x^2-2)";
+        //let expr = "-3(x+2)";
+        //let expr = "-3x-6";
+        //let expr = "(x(3l)^3*(4^4)^(4^4))3";
+        //let expr = "sigma(i=0, 100, i^2)";
+        //println!(
+        //    "{:?}",
+        //    scan::Scanner::new(expr).scan_all().and_then(|ok| Ok(ok
+        //        .iter()
+        //        .map(|tk| tk.kind)
+        //        .collect::<Vec<scan::TokenKind>>()))
+        //);
+        print_stuff(expr);
+    } else {
+        let mut rl = Editor::<()>::new();
+        let _ = rl.load_history("inputs.txt");
+        loop {
+            let readline = rl.readline(">> ");
+            match readline {
+                Ok(line) => {
+                    rl.add_history_entry(&line);
+                    print_stuff(&line);
+                }
+                Err(ReadlineError::Interrupted) => {
+                    break;
+                }
+                Err(ReadlineError::Eof) => {
+                    break;
+                }
+                Err(err) => {
+                    println!("Error: {:?}", err);
+                    break;
+                }
+            }
+        }
+        rl.save_history("inputs.txt").unwrap();
+    }
+}
 
-    let expr = parse::parse(&mut scan::Scanner::new(expr));
+fn print_stuff(line: &str) {
+    let expr = parse::parse(&mut scan::Scanner::new(line));
     if let Ok(expr) = expr {
         //println!("{:#?}", expr);
         //ast::print_expr(&expr);

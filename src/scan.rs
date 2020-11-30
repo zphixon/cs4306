@@ -55,6 +55,7 @@ impl<'a> Scanner<'a> {
         }
     }
 
+    #[allow(dead_code)]
     pub fn scan_all(mut self) -> Result<Vec<Token<'a>>, &'static str> {
         while self.next()?.kind != TokenKind::End {}
         Ok(self.tokens.drain(0..).collect())

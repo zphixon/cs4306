@@ -32,51 +32,48 @@ pub enum Expr<'a> {
 }
 
 impl Expr<'_> {
-    fn deep(&self) -> bool {
+    fn is_binary(&self) -> bool {
         match self {
-            Expr::Unary { rhs, .. } => match rhs.as_ref() {
-                Expr::Literal { .. } | Expr::Variable { .. } | Expr::SpecialVariable { .. } => {
-                    false
-                }
-                _ => true,
-            },
-
-            Expr::Binary { rhs, lhs, .. } => {
-                (match rhs.as_ref() {
-                    Expr::Literal { .. } | Expr::Variable { .. } | Expr::SpecialVariable { .. } => {
-                        false
-                    }
-                    _ => true,
-                }) || (match lhs.as_ref() {
-                    Expr::Literal { .. } | Expr::Variable { .. } | Expr::SpecialVariable { .. } => {
-                        false
-                    }
-                    _ => true,
-                })
-            }
-
+            Expr::Binary { .. } => true,
             _ => false,
         }
     }
 }
 
 pub fn print_infix(expr: &Expr<'_>) {
-    if expr.deep() {
-        print!("(");
-    }
-
     match expr {
         Expr::Literal { literal } => print!("{}", literal.lexeme),
         Expr::Variable { name } => print!("{}", name.lexeme),
         Expr::SpecialVariable { name } => print!("{}", name.lexeme),
         Expr::Unary { op, rhs } => {
             print!(" {}", op.lexeme);
+
+            if rhs.is_binary() {
+                print!("(");
+            }
             print_infix(rhs.as_ref());
+            if rhs.is_binary() {
+                print!(")");
+            }
         }
         Expr::Binary { lhs, op, rhs } => {
+            if lhs.is_binary() {
+                print!("(");
+            }
             print_infix(lhs);
+            if lhs.is_binary() {
+                print!(")");
+            }
+
             print!(" {} ", op.lexeme);
+
+            if rhs.is_binary() {
+                print!("(");
+            }
             print_infix(rhs);
+            if rhs.is_binary() {
+                print!(")");
+            }
         }
         Expr::Call { name, args } => {
             print!("{}(", name.lexeme);
@@ -87,29 +84,35 @@ pub fn print_infix(expr: &Expr<'_>) {
             print!(")");
         }
     }
-
-    if expr.deep() {
-        print!(")");
-    }
 }
 
 pub fn print_prefix(expr: &Expr<'_>) {
-    if expr.deep() {
-        print!("( ");
-    }
-
     match expr {
         Expr::Literal { literal } => print!("{} ", literal.lexeme),
         Expr::Variable { name } => print!("{} ", name.lexeme),
         Expr::SpecialVariable { name } => print!("{} ", name.lexeme),
         Expr::Unary { op, rhs } => {
-            print!("{} ", op.lexeme);
+            print!("{}", op.lexeme);
             print_prefix(rhs.as_ref());
         }
         Expr::Binary { lhs, op, rhs } => {
             print!("{} ", op.lexeme);
+
+            if lhs.is_binary() {
+                print!("(");
+            }
             print_prefix(lhs);
+            if lhs.is_binary() {
+                print!(") ");
+            }
+
+            if rhs.is_binary() {
+                print!("(");
+            }
             print_prefix(rhs);
+            if rhs.is_binary() {
+                print!(")");
+            }
         }
         Expr::Call { name, args } => {
             print!("{}(", name.lexeme);
@@ -120,28 +123,41 @@ pub fn print_prefix(expr: &Expr<'_>) {
             print!(") ");
         }
     }
-
-    if expr.deep() {
-        print!(") ");
-    }
 }
 
 pub fn print_postfix(expr: &Expr<'_>) {
-    if expr.deep() {
-        print!("( ");
-    }
-
     match expr {
         Expr::Literal { literal } => print!("{} ", literal.lexeme),
         Expr::Variable { name } => print!("{} ", name.lexeme),
         Expr::SpecialVariable { name } => print!("{} ", name.lexeme),
         Expr::Unary { op, rhs } => {
-            print!("{} ", op.lexeme);
+            print!("{}", op.lexeme);
+
+            if rhs.is_binary() {
+                print!("(");
+            }
             print_postfix(rhs.as_ref());
+            if rhs.is_binary() {
+                print!(")");
+            }
         }
         Expr::Binary { lhs, op, rhs } => {
+            if lhs.is_binary() {
+                print!("(");
+            }
             print_postfix(lhs);
+            if lhs.is_binary() {
+                print!(") ");
+            }
+
+            if rhs.is_binary() {
+                print!("(");
+            }
             print_postfix(rhs);
+            if rhs.is_binary() {
+                print!(") ");
+            }
+
             print!("{} ", op.lexeme);
         }
         Expr::Call { name, args } => {
@@ -152,10 +168,6 @@ pub fn print_postfix(expr: &Expr<'_>) {
             }
             print!(") ");
         }
-    }
-
-    if expr.deep() {
-        print!(") ");
     }
 }
 
@@ -193,41 +205,5 @@ fn print_expr_(expr: &Expr<'_>, level: usize) {
                 print_expr_(expr, level + 1);
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::scan::*;
-    #[test]
-    fn deep() {
-        assert!(!Expr::Binary {
-            rhs: Box::new(Expr::Literal {
-                literal: Token::new(TokenKind::Variable, "something")
-            }),
-            op: Token::new(TokenKind::Multiply, "*"),
-            lhs: Box::new(Expr::Literal {
-                literal: Token::new(TokenKind::Integer(3), "3")
-            }),
-        }
-        .deep());
-
-        assert!(Expr::Binary {
-            rhs: Box::new(Expr::Binary {
-                rhs: Box::new(Expr::Literal {
-                    literal: Token::new(TokenKind::Variable, "something")
-                }),
-                op: Token::new(TokenKind::Multiply, "*"),
-                lhs: Box::new(Expr::Literal {
-                    literal: Token::new(TokenKind::Integer(3), "3")
-                })
-            }),
-            op: Token::new(TokenKind::Multiply, "*"),
-            lhs: Box::new(Expr::Literal {
-                literal: Token::new(TokenKind::Integer(3), "3")
-            }),
-        }
-        .deep());
     }
 }
